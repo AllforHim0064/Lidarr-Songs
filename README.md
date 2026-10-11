@@ -4,6 +4,9 @@ This experimental fork adds interactive individual-song downloads with optional
 whole-album fallback, importing only the requested song. See
 [setup and usage](README-TRACKS.md) and [validation results](VALIDATION-TRACKS.md).
 
+[**Cadence**](cadence/README.md) adds a self-hosted song request portal, personal
+playlists, and a browser music player.
+
 
 [![Build Status](https://dev.azure.com/Lidarr/Lidarr/_apis/build/status/lidarr.Lidarr?branchName=develop)](https://dev.azure.com/Lidarr/Lidarr/_build/latest?definitionId=1&branchName=develop)
 [![Translation status](https://translate.servarr.com/widget/servarr/lidarr/svg-badge.svg)](https://translate.servarr.com/engage/servarr/?utm_source=widget)

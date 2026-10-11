@@ -167,3 +167,8 @@ node_modules.nosync
 
 # Ignore Jetbrains IntelliJ Workspace Directories
 .idea/
+
+# Cadence local state and secrets
+/cadence-data/
+.env
+__pycache__/
