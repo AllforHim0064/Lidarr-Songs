@@ -4,6 +4,7 @@ RUN corepack enable && corepack prepare yarn@1.22.19 --activate
 COPY package.json yarn.lock .yarnrc ./
 RUN yarn install --frozen-lockfile --ignore-scripts --network-timeout 600000
 COPY frontend ./frontend
+COPY tsconfig.json ./
 RUN yarn build --env production
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0.421 AS backend
