@@ -164,10 +164,13 @@ namespace NzbDrone.Core.Download.TrackedDownloads
                     trackedDownload.Indexer = grabbedEvent?.Data?.GetValueOrDefault("indexer");
                     trackedDownload.Added = grabbedEvent?.Date;
 
-                    if (grabbedEvent?.Data?.TryGetValue("RequestedTrackIds", out var requestedTracks) == true)
+                    // Embedded history dictionaries are serialized with camel-case keys.
+                    var grabbedData = grabbedEvent?.Data == null ? null :
+                        new Dictionary<string, string>(grabbedEvent.Data, StringComparer.OrdinalIgnoreCase);
+                    if (grabbedData?.TryGetValue("requestedTrackIds", out var requestedTracks) == true)
                     {
                         var requestedIds = requestedTracks.Split(',').Select(int.Parse).Distinct().ToList();
-                        if (grabbedEvent.Data.TryGetValue("RequestedForeignTrackIds", out var foreignTrackIds) && !string.IsNullOrWhiteSpace(foreignTrackIds))
+                        if (grabbedData.TryGetValue("requestedForeignTrackIds", out var foreignTrackIds) && !string.IsNullOrWhiteSpace(foreignTrackIds))
                         {
                             var identities = foreignTrackIds.Split(',').Distinct().ToList();
                             var tracks = _trackService.GetTracksByAlbum(grabbedEvent.AlbumId);

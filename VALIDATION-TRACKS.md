@@ -1,5 +1,7 @@
 # Lidarr Tracks validation
 
+- History reload fix: 7 tracked-download tests passed, including two new cases that retain selected-track scope before and after the actual embedded-document serialization round trip and remap a changed local track ID. The changed service and fixture were compiled against the previously built dependency assemblies and run with NUnitLite. Live download recovery remains unvalidated.
+
 - Backend: Linux x64 .NET 8 Core, HTTP API, Host and Console projects compiled successfully.
 - Frontend: production webpack build succeeded; the two changed JavaScript files passed ESLint.
 - Regression tests: 59 passed, 0 failed (NUnit). Includes the new matching/selection cases, selected-song completion/restart tests, Newznab request generation, existing completed downloads, tracked-download history and failed-download handling.
