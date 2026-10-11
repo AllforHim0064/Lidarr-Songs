@@ -1,0 +1,17 @@
+services:
+  lidarr-tracks:
+    build:
+      context: .
+      dockerfile: Dockerfile.tracks
+    image: lidarr-tracks:local
+    restart: unless-stopped
+    ports:
+      - "8686:8686"
+    environment:
+      LIDARR_SLSKD_URL: ${LIDARR_SLSKD_URL:-}
+      LIDARR_SLSKD_API_KEY: ${LIDARR_SLSKD_API_KEY:-}
+      LIDARR_SLSKD_DOWNLOAD_ROOT: /downloads/slskd
+    volumes:
+      - ./tracks-config:/config
+      - ${MUSIC_PATH:-./music}:/music
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads

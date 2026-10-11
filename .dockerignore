@@ -1,0 +1,13 @@
+.git
+node_modules
+_output
+_temp
+_tests
+_artifacts
+.env
+config
+tracks-config
+downloads
+music
+*.zip
+*.trx

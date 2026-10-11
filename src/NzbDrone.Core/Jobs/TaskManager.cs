@@ -16,6 +16,7 @@ using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Music.Commands;
+using NzbDrone.Core.Music.TrackDownloads;
 using NzbDrone.Core.Update.Commands;
 
 namespace NzbDrone.Core.Jobs
@@ -65,6 +66,11 @@ namespace NzbDrone.Core.Jobs
         {
             var defaultTasks = new List<ScheduledTask>
                 {
+                    new ScheduledTask
+                    {
+                        Interval = 1,
+                        TypeName = typeof(ProcessSoulseekTracksCommand).FullName
+                    },
                     new ScheduledTask
                     {
                         Interval = 1,

@@ -30,6 +30,12 @@ namespace NzbDrone.Core.Download
         [EventHandleOrder(EventHandleOrder.Last)]
         public void Handle(DownloadFailedEvent message)
         {
+            if (message.TrackedDownload?.RemoteAlbum?.RequestedTrackIds.Count > 0)
+            {
+                _logger.Info("Selected song download failed. Use the track search to choose another result.");
+                return;
+            }
+
             if (message.SkipRedownload)
             {
                 _logger.Debug("Skip redownloading requested by user");

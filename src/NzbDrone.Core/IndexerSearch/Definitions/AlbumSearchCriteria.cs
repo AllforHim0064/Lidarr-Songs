@@ -5,6 +5,7 @@ namespace NzbDrone.Core.IndexerSearch.Definitions
     public class AlbumSearchCriteria : SearchCriteriaBase
     {
         public string AlbumTitle { get; set; }
+        public string TrackTitle { get; set; }
         public int AlbumYear { get; set; }
         public string Disambiguation { get; set; }
 

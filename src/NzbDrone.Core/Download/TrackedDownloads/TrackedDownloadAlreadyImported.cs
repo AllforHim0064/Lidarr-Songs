@@ -35,6 +35,13 @@ namespace NzbDrone.Core.Download.TrackedDownloads
                 return true;
             }
 
+            if (trackedDownload.RemoteAlbum.RequestedTrackIds.Count > 0)
+            {
+                var importedIds = historyItems.Where(h => h.EventType == EntityHistoryEventType.TrackFileImported)
+                    .Select(h => h.TrackId).ToHashSet();
+                return trackedDownload.RemoteAlbum.RequestedTrackIds.All(importedIds.Contains);
+            }
+
             var allAlbumsImportedInHistory = trackedDownload.RemoteAlbum.Albums.All(album =>
             {
                 var lastHistoryItem = historyItems.FirstOrDefault(h => h.AlbumId == album.Id);

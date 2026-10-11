@@ -18,6 +18,8 @@ namespace NzbDrone.Core.Parser.Model
         public List<CustomFormat> CustomFormats { get; set; }
         public int CustomFormatScore { get; set; }
         public ReleaseSourceType ReleaseSource { get; set; }
+        public List<int> RequestedTrackIds { get; set; } = new List<int>();
+        public List<string> RequestedForeignTrackIds { get; set; } = new List<string>();
 
         public RemoteAlbum()
         {

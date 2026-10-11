@@ -66,6 +66,41 @@ namespace NzbDrone.Core.Test.Download.CompletedDownloadServiceTests
                   .Returns<DownloadClientItem, DownloadClientItem>((i, p) => i);
         }
 
+        [Test]
+        public void selected_song_marks_album_fallback_complete_when_only_requested_song_imported()
+        {
+            _trackedDownload.RemoteAlbum.RequestedTrackIds = new List<int> { 42 };
+            var results = new List<ImportResult>
+            {
+                new ImportResult(new ImportDecision<LocalTrack>(new LocalTrack { Tracks = new List<Track> { new Track { Id = 42 } } }))
+            };
+            Subject.VerifyImport(_trackedDownload, results).Should().BeTrue();
+            _trackedDownload.State.Should().Be(TrackedDownloadState.Imported);
+        }
+
+        [Test]
+        public void selected_song_does_not_mark_download_complete_for_an_unrequested_import()
+        {
+            _trackedDownload.RemoteAlbum.RequestedTrackIds = new List<int> { 42 };
+            var results = new List<ImportResult>
+            {
+                new ImportResult(new ImportDecision<LocalTrack>(new LocalTrack { Tracks = new List<Track> { new Track { Id = 43 } } }))
+            };
+            Subject.VerifyImport(_trackedDownload, results).Should().BeFalse();
+            Mocker.GetMock<IEventAggregator>().Verify(v => v.PublishEvent(It.IsAny<DownloadCompletedEvent>()), Times.Never());
+        }
+
+        [Test]
+        public void selected_song_completion_survives_restart_using_track_import_history()
+        {
+            _trackedDownload.RemoteAlbum.RequestedTrackIds = new List<int> { 42 };
+            Mocker.GetMock<IHistoryService>().Setup(s => s.FindByDownloadId(It.IsAny<string>())).Returns(new List<EntityHistory>
+            {
+                new EntityHistory { TrackId = 42, EventType = EntityHistoryEventType.TrackFileImported }
+            });
+            Subject.VerifyImport(_trackedDownload, new List<ImportResult>()).Should().BeTrue();
+        }
+
         private Album CreateAlbum(int id, int trackCount)
         {
             return new Album

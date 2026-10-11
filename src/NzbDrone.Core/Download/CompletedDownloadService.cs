@@ -13,6 +13,7 @@ using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.MediaFiles.TrackImport;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Music;
+using NzbDrone.Core.Music.TrackDownloads;
 using NzbDrone.Core.Parser;
 
 namespace NzbDrone.Core.Download
@@ -34,6 +35,7 @@ namespace NzbDrone.Core.Download
         private readonly IParsingService _parsingService;
         private readonly ITrackedDownloadAlreadyImported _trackedDownloadAlreadyImported;
         private readonly Logger _logger;
+        private readonly ISelectedTrackImportService _selectedTrackImport;
 
         public CompletedDownloadService(IEventAggregator eventAggregator,
                                         IHistoryService historyService,
@@ -42,6 +44,7 @@ namespace NzbDrone.Core.Download
                                         IArtistService artistService,
                                         IParsingService parsingService,
                                         ITrackedDownloadAlreadyImported trackedDownloadAlreadyImported,
+                                        ISelectedTrackImportService selectedTrackImport,
                                         Logger logger)
         {
             _eventAggregator = eventAggregator;
@@ -52,6 +55,7 @@ namespace NzbDrone.Core.Download
             _parsingService = parsingService;
             _trackedDownloadAlreadyImported = trackedDownloadAlreadyImported;
             _logger = logger;
+            _selectedTrackImport = selectedTrackImport;
         }
 
         public void Check(TrackedDownload trackedDownload)
@@ -123,7 +127,9 @@ namespace NzbDrone.Core.Download
             trackedDownload.State = TrackedDownloadState.Importing;
 
             var outputPath = trackedDownload.ImportItem.OutputPath.FullPath;
-            var importResults = _downloadedTracksImportService.ProcessPath(outputPath, ImportMode.Auto, trackedDownload.RemoteAlbum.Artist, trackedDownload.ImportItem);
+            var importResults = trackedDownload.RemoteAlbum.RequestedTrackIds.Any() ?
+                _selectedTrackImport.Import(outputPath, trackedDownload.RemoteAlbum.RequestedTrackIds, trackedDownload.ImportItem) :
+                _downloadedTracksImportService.ProcessPath(outputPath, ImportMode.Auto, trackedDownload.RemoteAlbum.Artist, trackedDownload.ImportItem);
 
             if (VerifyImport(trackedDownload, importResults))
             {
@@ -189,6 +195,23 @@ namespace NzbDrone.Core.Download
 
         public bool VerifyImport(TrackedDownload trackedDownload, List<ImportResult> importResults)
         {
+            if (trackedDownload.RemoteAlbum.RequestedTrackIds.Any())
+            {
+                var importedIds = importResults.Where(r => r.Result == ImportResultType.Imported)
+                    .SelectMany(r => r.ImportDecision.Item.Tracks).Select(t => t.Id).ToHashSet();
+                var historyIds = _historyService.FindByDownloadId(trackedDownload.DownloadItem.DownloadId)
+                    .Where(h => h.EventType == EntityHistoryEventType.TrackFileImported).Select(h => h.TrackId);
+                importedIds.UnionWith(historyIds);
+                if (!trackedDownload.RemoteAlbum.RequestedTrackIds.All(importedIds.Contains))
+                {
+                    return false;
+                }
+
+                trackedDownload.State = TrackedDownloadState.Imported;
+                _eventAggregator.PublishEvent(new DownloadCompletedEvent(trackedDownload, trackedDownload.RemoteAlbum.Artist.Id));
+                return true;
+            }
+
             var allTracksImported =
                 (importResults.Any() && importResults.All(c => c.Result == ImportResultType.Imported)) ||
                 importResults.Where(c => c.Result == ImportResultType.Imported)
