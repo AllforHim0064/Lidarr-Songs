@@ -4,8 +4,9 @@ This experimental fork adds interactive individual-song downloads with optional
 whole-album fallback, importing only the requested song. See
 [setup and usage](README-TRACKS.md) and [validation results](VALIDATION-TRACKS.md).
 
-[**Cadence**](cadence/README.md) adds a self-hosted song request portal, personal
-playlists, and a browser music player.
+[**Cadence**](https://github.com/AllforHim0064/Cadence) adds a self-hosted song request portal, personal
+playlists, and a browser music player. It is maintained in its own repository;
+see [migration instructions](https://github.com/AllforHim0064/Cadence#migrate-from-the-bundled-lidarr-songs-version) if you started the bundled app.
 
 
 [![Build Status](https://dev.azure.com/Lidarr/Lidarr/_apis/build/status/lidarr.Lidarr?branchName=develop)](https://dev.azure.com/Lidarr/Lidarr/_build/latest?definitionId=1&branchName=develop)
