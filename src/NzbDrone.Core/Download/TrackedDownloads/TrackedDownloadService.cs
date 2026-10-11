@@ -35,6 +35,7 @@ namespace NzbDrone.Core.Download.TrackedDownloads
     {
         private readonly IParsingService _parsingService;
         private readonly IHistoryService _historyService;
+        private readonly ITrackService _trackService;
         private readonly IEventAggregator _eventAggregator;
         private readonly IDownloadHistoryService _downloadHistoryService;
         private readonly IRemoteAlbumAggregationService _aggregationService;
@@ -45,6 +46,7 @@ namespace NzbDrone.Core.Download.TrackedDownloads
         public TrackedDownloadService(IParsingService parsingService,
                                       ICacheManager cacheManager,
                                       IHistoryService historyService,
+                                      ITrackService trackService,
                                       ICustomFormatCalculationService formatCalculator,
                                       IEventAggregator eventAggregator,
                                       IDownloadHistoryService downloadHistoryService,
@@ -53,6 +55,7 @@ namespace NzbDrone.Core.Download.TrackedDownloads
         {
             _parsingService = parsingService;
             _historyService = historyService;
+            _trackService = trackService;
             _cache = cacheManager.GetCache<TrackedDownload>(GetType());
             _formatCalculator = formatCalculator;
             _eventAggregator = eventAggregator;
@@ -68,6 +71,12 @@ namespace NzbDrone.Core.Download.TrackedDownloads
 
         private void UpdateCachedItem(TrackedDownload trackedDownload)
         {
+            if (trackedDownload.RemoteAlbum?.RequestedTrackIds.Count > 0)
+            {
+                // The requested song identity and album come from grab history, not title parsing.
+                return;
+            }
+
             var parsedAlbumInfo = Parser.Parser.ParseAlbumTitle(trackedDownload.DownloadItem.Title);
 
             trackedDownload.RemoteAlbum = parsedAlbumInfo == null ? null : _parsingService.Map(parsedAlbumInfo);
@@ -155,9 +164,35 @@ namespace NzbDrone.Core.Download.TrackedDownloads
                     trackedDownload.Indexer = grabbedEvent?.Data?.GetValueOrDefault("indexer");
                     trackedDownload.Added = grabbedEvent?.Date;
 
-                    if (parsedAlbumInfo == null ||
+                    // Embedded history dictionaries are serialized with camel-case keys.
+                    var grabbedData = grabbedEvent?.Data == null ? null :
+                        new Dictionary<string, string>(grabbedEvent.Data, StringComparer.OrdinalIgnoreCase);
+                    if (grabbedData?.TryGetValue("requestedTrackIds", out var requestedTracks) == true)
+                    {
+                        var requestedIds = requestedTracks.Split(',').Select(int.Parse).Distinct().ToList();
+                        if (grabbedData.TryGetValue("requestedForeignTrackIds", out var foreignTrackIds) && !string.IsNullOrWhiteSpace(foreignTrackIds))
+                        {
+                            var identities = foreignTrackIds.Split(',').Distinct().ToList();
+                            var tracks = _trackService.GetTracksByAlbum(grabbedEvent.AlbumId);
+                            var resolved = identities.Select(id => tracks.Where(t => t.ForeignTrackId == id || t.OldForeignTrackIds.Contains(id)).ToList()).ToList();
+                            // A missing/ambiguous metadata identity must remain track scoped and block import.
+                            requestedIds = resolved.All(t => t.Count == 1) ? resolved.Select(t => t.Single().Id).ToList() : new List<int> { -1 };
+                        }
+
+                        // Track release titles need not parse as album release titles. History is authoritative.
+                        trackedDownload.RemoteAlbum = new RemoteAlbum
+                        {
+                            Artist = grabbedEvent.Artist,
+                            Albums = new List<Album> { grabbedEvent.Album },
+                            ParsedAlbumInfo = new ParsedAlbumInfo { Quality = grabbedEvent.Quality },
+                            Release = new ReleaseInfo { Title = grabbedEvent.SourceTitle },
+                            RequestedTrackIds = requestedIds
+                        };
+                    }
+
+                    if ((trackedDownload.RemoteAlbum == null || trackedDownload.RemoteAlbum.RequestedTrackIds.Count == 0) && (parsedAlbumInfo == null ||
                         trackedDownload.RemoteAlbum?.Artist == null ||
-                        trackedDownload.RemoteAlbum.Albums.Empty())
+                        trackedDownload.RemoteAlbum.Albums.Empty()))
                     {
                         // Try parsing the original source title and if that fails, try parsing it as a special
                         var historyArtist = firstHistoryItem.Artist;

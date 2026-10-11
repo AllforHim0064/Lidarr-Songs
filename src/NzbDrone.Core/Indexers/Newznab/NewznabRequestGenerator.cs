@@ -88,6 +88,17 @@ namespace NzbDrone.Core.Indexers.Newznab
         {
             var pageableRequests = new IndexerPageableRequestChain();
 
+            if (!string.IsNullOrWhiteSpace(searchCriteria.TrackTitle))
+            {
+                if (SupportsSearch)
+                {
+                    pageableRequests.Add(GetPagedRequests(1, Settings.Categories, "search",
+                        $"&q={NewsnabifyTitle(searchCriteria.Artist.Name + " " + searchCriteria.TrackTitle)}"));
+                }
+
+                return pageableRequests;
+            }
+
             if (SupportsAudioSearch)
             {
                 var artistQuery = AudioTextSearchEngine == "raw" ? searchCriteria.ArtistQuery : searchCriteria.CleanArtistQuery;

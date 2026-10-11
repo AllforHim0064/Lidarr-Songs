@@ -6,6 +6,7 @@ import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import { icons, kinds } from 'Helpers/Props';
 import FileDetailsModal from 'TrackFile/FileDetailsModal';
 import translate from 'Utilities/String/translate';
+import TrackDownloadModal from './TrackDownloadModal';
 import styles from './TrackActionsCell.css';
 
 class TrackActionsCell extends Component {
@@ -18,6 +19,7 @@ class TrackActionsCell extends Component {
 
     this.state = {
       isDetailsModalOpen: false,
+      isDownloadModalOpen: false,
       isConfirmDeleteModalOpen: false
     };
   }
@@ -63,6 +65,17 @@ class TrackActionsCell extends Component {
 
     return (
       <TableRowCell className={styles.TrackActionsCell}>
+        <IconButton
+          name={icons.SEARCH}
+          title="Download this song"
+          isDisabled={!!trackFileId}
+          onPress={() => this.setState({ isDownloadModalOpen: true })}
+        />
+        <TrackDownloadModal
+          isOpen={this.state.isDownloadModalOpen}
+          trackId={this.props.id}
+          onModalClose={() => this.setState({ isDownloadModalOpen: false })}
+        />
         {
           trackFilePath &&
             <IconButton

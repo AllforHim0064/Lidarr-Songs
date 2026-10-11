@@ -49,6 +49,19 @@ namespace NzbDrone.Core.Test.IndexerTests.NewznabTests
         }
 
         [Test]
+        public void track_search_uses_generic_query_and_one_page()
+        {
+            _capabilities.SupportedSearchParameters = new[] { "q" };
+            _capabilities.SupportedAudioSearchParameters = new[] { "q", "artist", "album" };
+            _singleAlbumSearchCriteria.TrackTitle = "Smooth Criminal";
+            var requests = Subject.GetSearchRequests(_singleAlbumSearchCriteria).GetAllTiers().SelectMany(t => t).ToList();
+            requests.Should().HaveCount(1);
+            requests[0].Url.Query.Should().Contain("t=search");
+            requests[0].Url.Query.Should().Contain("q=Alien%20Ant%20Farm%20Smooth%20Criminal");
+            requests[0].Url.Query.Should().NotContain("album=");
+        }
+
+        [Test]
         public void should_search_by_artist_and_album_if_supported()
         {
             _capabilities.SupportedAudioSearchParameters = new[] { "q", "artist", "album" };

@@ -167,6 +167,11 @@ namespace NzbDrone.Core.History
                 history.Data.Add("CustomFormatScore", message.Album.CustomFormatScore.ToString());
                 history.Data.Add("ReleaseSource", message.Album.ReleaseSource.ToString());
                 history.Data.Add("IndexerFlags", message.Album.Release.IndexerFlags.ToString());
+                if (message.Album.RequestedTrackIds.Any())
+                {
+                    history.Data.Add("RequestedTrackIds", string.Join(",", message.Album.RequestedTrackIds));
+                    history.Data.Add("RequestedForeignTrackIds", string.Join(",", message.Album.RequestedForeignTrackIds));
+                }
 
                 if (!message.Album.ParsedAlbumInfo.ReleaseHash.IsNullOrWhiteSpace())
                 {

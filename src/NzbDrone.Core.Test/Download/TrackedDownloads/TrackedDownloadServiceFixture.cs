@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using FluentAssertions;
 using Moq;
 using NUnit.Framework;
+using NzbDrone.Core.Datastore.Converters;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Download.TrackedDownloads;
 using NzbDrone.Core.History;
@@ -18,6 +20,60 @@ namespace NzbDrone.Core.Test.Download.TrackedDownloads
     [TestFixture]
     public class TrackedDownloadServiceFixture : CoreTest<TrackedDownloadService>
     {
+        [TestCase(false)]
+        [TestCase(true)]
+        public void should_restore_selected_track_identity_after_history_serialization(bool roundTrip)
+        {
+            var data = new Dictionary<string, string>
+            {
+                { "RequestedTrackIds", "12" },
+                { "RequestedForeignTrackIds", "selected-track" }
+            };
+            if (roundTrip)
+            {
+                var parameter = new Mock<IDbDataParameter>();
+                parameter.SetupProperty(p => p.Value);
+                var converter = new EmbeddedDocumentConverter<Dictionary<string, string>>();
+                converter.SetValue(parameter.Object, data);
+                data = converter.Parse(parameter.Object.Value);
+                data.Should().ContainKey("requestedTrackIds");
+            }
+
+            var artist = new Artist { Id = 5 };
+            var album = new Album { Id = 4, ArtistId = 5 };
+            Mocker.GetMock<IHistoryService>()
+                .Setup(s => s.FindByDownloadId("35238"))
+                .Returns(new List<EntityHistory>
+                {
+                    new EntityHistory
+                    {
+                        EventType = EntityHistoryEventType.Grabbed,
+                        Artist = artist,
+                        Album = album,
+                        AlbumId = album.Id,
+                        SourceTitle = "Audio Artist - Individual Song MP3",
+                        Data = data
+                    }
+                });
+            // Metadata refresh changed the local ID; persisted foreign identity is authoritative.
+            Mocker.GetMock<ITrackService>()
+                .Setup(s => s.GetTracksByAlbum(album.Id))
+                .Returns(new List<Track> { new Track { Id = 42, ForeignTrackId = "selected-track" } });
+            var client = new DownloadClientDefinition { Id = 1, Protocol = nameof(TorrentDownloadProtocol) };
+            var item = new DownloadClientItem
+            {
+                DownloadId = "35238",
+                Title = "Audio Artist - Individual Song MP3",
+                DownloadClientInfo = new DownloadClientItemClientInfo { Id = 1, Protocol = client.Protocol }
+            };
+
+            var tracked = Subject.TrackDownload(client, item);
+
+            tracked.RemoteAlbum.Should().NotBeNull();
+            tracked.RemoteAlbum.RequestedTrackIds.Should().Equal(42);
+            tracked.RemoteAlbum.Albums.Should().ContainSingle().Which.Id.Should().Be(4);
+        }
+
         private void GivenDownloadHistory()
         {
             Mocker.GetMock<IHistoryService>()
